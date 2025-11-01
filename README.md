@@ -32,6 +32,11 @@ This makes it perfect for:
 ```bash
 git clone https://github.com/<your-username>/structify.git
 cd structify
-
-### 2️⃣ Install dependencies
+2️⃣ Install dependencies
 npm install
+3️⃣ Run the app locally
+npm run dev
+
+Once it starts, open your browser and go to:
+http://localhost:5173
+
