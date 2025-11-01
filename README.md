@@ -32,3 +32,6 @@ This makes it perfect for:
 ```bash
 git clone https://github.com/<your-username>/structify.git
 cd structify
+
+### 2️⃣ Install dependencies
+npm install
