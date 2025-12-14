@@ -4,7 +4,7 @@ export default function AddCustomFile({ onAddOne: onAddBatch }) {
     if (!files.length) return;
 
     const fileObjs = files.map((f) => ({
-      path: f.name, // let inference in App.jsx decide folder
+      path: f.name,
       file: f,
     }));
 

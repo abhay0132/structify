@@ -11,6 +11,7 @@ import {
   inferFolderForBatch,
 } from "./utils/pathUtils";
 import { generateMarkdown } from "./utils/markdownBuilder";
+import { exportMarkdownToPDF } from "./utils/pdfExporter";
 
 export default function App() {
   const [files, setFiles] = useState([]);
@@ -68,6 +69,10 @@ export default function App() {
 
   function handleAddFiles(batch) {
     mergeFiles(batch);
+  }
+  function exportPDF() {
+    if (!markdown) return;
+    exportMarkdownToPDF(markdown);
   }
 
   function handleAddBatch(newFiles) {
@@ -182,7 +187,9 @@ export default function App() {
                 markdown={markdown}
                 onCopy={copy}
                 onDownload={download}
+                onExportPDF={exportPDF}
               />
+
             </div>
           </div>
         </div>
@@ -190,9 +197,9 @@ export default function App() {
         <section className="why-section">
           <h3>💡 Why Use Structify?</h3>
           <p>
-            When you want to quickly share your project with ChatGPT or someone else —  
-            but don’t have time to push it to GitHub — Structify helps you select only the 
-            important files, builds a clean folder structure, and combines them into one 
+            When you want to quickly share your project with ChatGPT or someone else —
+            but don’t have time to push it to GitHub — Structify helps you select only the
+            important files, builds a clean folder structure, and combines them into one
             Markdown file ready to copy or send instantly.
           </p>
         </section>
