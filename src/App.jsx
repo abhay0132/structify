@@ -12,7 +12,6 @@ import {
 } from "./utils/pathUtils";
 import { generateMarkdown } from "./utils/markdownBuilder";
 import { exportMarkdownToPDF } from "./utils/pdfExporter";
-import { Analytics } from "@vercel/analytics/next"
 export default function App() {
   const [files, setFiles] = useState([]);
   const [tree, setTree] = useState("");
@@ -203,7 +202,6 @@ export default function App() {
             Markdown file ready to copy or send instantly.
           </p>
         </section>
-        <Analytics />
         <section className="guide-section">
           <h3>🚀 How to Use</h3>
           <ol>
