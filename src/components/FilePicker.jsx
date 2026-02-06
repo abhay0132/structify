@@ -4,7 +4,7 @@ export default function FilePicker({ onAddFiles }) {
     if (!chosen.length) return;
 
     const newFiles = chosen.map((f) => ({
-      path: f.webkitRelativePath || f.name, // Chrome keeps full folder path
+      path: f.webkitRelativePath || f.name,
       file: f,
     }));
 
@@ -13,17 +13,23 @@ export default function FilePicker({ onAddFiles }) {
   };
 
   return (
-    <div className="space-y-2">
+    <>
+      <label htmlFor="folderInput">
+        <div className="upload-zone">
+          <div className="upload-text">Select folder or drop here</div>
+          <div className="upload-hint">
+            Auto-excludes node_modules • .git • build • dist
+          </div>
+        </div>
+      </label>
       <input
+        id="folderInput"
         type="file"
         multiple
         webkitdirectory="true"
         onChange={handleSelect}
-        className="block w-full border rounded-lg p-2 bg-gray-50 hover:bg-gray-100 cursor-pointer transition"
+        style={{ display: "none" }}
       />
-      <p className="text-xs text-gray-500">
-        💡 You can select one or multiple folders (Chrome only). Structify merges everything while preserving folder structure.
-      </p>
-    </div>
+    </>
   );
 }

@@ -1,5 +1,4 @@
 import { buildTree, stringifyTree } from "./treeUtils";
-import { normalizePath } from "./pathUtils";
 
 function guessFence(path) {
   const lower = path.toLowerCase();
@@ -11,22 +10,20 @@ function guessFence(path) {
   if (lower.endsWith(".html")) return "html";
   if (lower.endsWith(".json")) return "json";
   if (lower.endsWith(".md")) return "md";
+  if (lower.endsWith(".py")) return "python";
   return "";
 }
 
 export async function generateMarkdown(files) {
-  // Normalize paths
-  const allPaths = files.map((f) => normalizePath(f.path));
+  // Build tree
+  const allPaths = files.map((f) => f.path);
   const tree = stringifyTree(buildTree(allPaths));
 
-  // Read both manual and picked files
+  // Read file contents
   const contents = await Promise.all(
     files.map(async (f) => {
-      let text = f.content || "";
-      if (f.file) {
-        text = await f.file.text();
-      }
-      return { relPath: f.path, text };
+      const text = await f.file.text();
+      return { path: f.path, text };
     })
   );
 
@@ -38,11 +35,11 @@ export async function generateMarkdown(files) {
     tree.trim(),
     "```",
     "",
-    ...contents.flatMap(({ relPath, text }) => [
-      `## ${relPath}`,
+    ...contents.flatMap(({ path, text }) => [
+      `## ${path}`,
       "",
-      "```" + guessFence(relPath),
-      text ? text.replaceAll("```", "```\\u200b") : "",
+      "```" + guessFence(path),
+      text,
       "```",
       "",
     ]),

@@ -1,47 +1,32 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import "./App.css";
 import FilePicker from "./components/FilePicker";
 import AddCustomFile from "./components/AddCustomFile";
 import TreePreview from "./components/TreePreview";
 import MarkdownPreview from "./components/MarkdownPreview";
-import {
-  normalizePath,
-  getDirname,
-  findCommonFolderPath,
-  inferFolderForBatch,
-} from "./utils/pathUtils";
 import { generateMarkdown } from "./utils/markdownBuilder";
-import { exportMarkdownToPDF } from "./utils/pdfExporter";
+
 export default function App() {
   const [files, setFiles] = useState([]);
   const [tree, setTree] = useState("");
   const [markdown, setMarkdown] = useState("");
   const [status, setStatus] = useState("");
 
-  const knownFolders = useMemo(() => {
-    const set = new Set();
-    for (const f of files) {
-      const dir = getDirname(f.path);
-      if (dir) set.add(dir);
-    }
-    return Array.from(set).sort();
-  }, [files]);
+  const IGNORE_LIST = [
+    "node_modules",
+    ".git",
+    ".next",
+    "dist",
+    "build",
+    ".vercel",
+    "coverage",
+    ".cache",
+    ".vscode",
+    "tmp",
+    "out",
+  ];
 
   function mergeFiles(newFiles) {
-    const IGNORE_LIST = [
-      "node_modules",
-      ".git",
-      ".next",
-      "dist",
-      "build",
-      ".vercel",
-      "coverage",
-      ".cache",
-      ".vscode",
-      "tmp",
-      "out"
-    ];
-
     const safeFiles = newFiles.filter((f) => {
       const path = f.path || "";
       return !IGNORE_LIST.some(
@@ -50,168 +35,182 @@ export default function App() {
     });
 
     if (safeFiles.length < newFiles.length) {
-      setStatus("Ignored system folders (node_modules, .git, build...)");
-      setTimeout(() => setStatus(""), 4000);
+      showStatus(`Ignored ${newFiles.length - safeFiles.length} system files`);
     }
 
-    const normalized = safeFiles.map((f) => ({
-      ...f,
-      path: normalizePath(f.path),
-    }));
+    const merged = [...files];
+    safeFiles.forEach((nf) => {
+      if (!merged.some((sf) => sf.path === nf.path)) {
+        merged.push(nf);
+      }
+    });
 
-    const merged = [
-      ...files,
-      ...normalized.filter((nf) => !files.some((sf) => sf.path === nf.path)),
-    ];
     setFiles(merged);
   }
 
   function handleAddFiles(batch) {
     mergeFiles(batch);
   }
-  function exportPDF() {
-    if (!markdown) return;
-    exportMarkdownToPDF(markdown);
-  }
 
   function handleAddBatch(newFiles) {
-    if (!newFiles.length) return;
-
-    const noFolder = newFiles.every((f) => !f.path.includes("/"));
-    if (noFolder) {
-      const inferred = inferFolderForBatch(newFiles.map((f) => f.file), files);
-      const prefixed = newFiles.map((f) => ({
-        ...f,
-        path: inferred ? `${inferred}/${f.file.name}` : f.file.name,
-      }));
-      mergeFiles(prefixed);
-      setStatus(`Added ${newFiles.length} file(s) → “${inferred}/”`);
-      setTimeout(() => setStatus(""), 2500);
-    } else mergeFiles(newFiles);
+    mergeFiles(newFiles);
   }
 
   async function handleGenerate() {
     if (!files.length) return;
     setStatus("Generating...");
-    const norm = files.map((f) => ({ ...f, path: normalizePath(f.path) }));
-    const { tree, markdown } = await generateMarkdown(norm);
+    const { tree, markdown } = await generateMarkdown(files);
     setTree(tree);
     setMarkdown(markdown);
-    setStatus("Markdown ready!");
-    setTimeout(() => setStatus(""), 2500);
-  }
-
-  function copy(text) {
-    navigator.clipboard.writeText(text);
-    setStatus("Copied!");
+    setStatus("Generated");
     setTimeout(() => setStatus(""), 2000);
   }
 
-  function download(filename, text) {
-    const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function editPath(index, newPath) {
+  function updateFilePath(index, newPath) {
     const updated = [...files];
-    updated[index] = { ...updated[index], path: normalizePath(newPath) };
+    updated[index] = { ...updated[index], path: newPath };
     setFiles(updated);
   }
 
   function removeFile(index) {
     const updated = files.filter((_, i) => i !== index);
     setFiles(updated);
-    const common = findCommonFolderPath(updated.map((f) => f.path));
-    if (common) setStatus(`Removed. Active folder: ${common}`);
   }
 
-  return (
-    <div className="page-wrapper">
-      <div className="app-container">
-        <header className="app-header">
-          <h1>Structify</h1>
-          <p>Instantly package your code and folder structure into one Markdown file.</p>
-        </header>
+  function clearAllFiles() {
+    setFiles([]);
+    setTree("");
+    setMarkdown("");
+  }
 
-        <div className="picker-card">
-          <FilePicker onAddFiles={handleAddFiles} />
+  function showStatus(message) {
+    setStatus(message);
+    setTimeout(() => setStatus(""), 2000);
+  }
+
+  // Calculate stats
+  const fileCount = files.length;
+  const totalBytes = files.reduce((sum, f) => sum + (f.file?.size || 0), 0);
+  const totalKB = Math.round(totalBytes / 1024);
+  const folders = new Set();
+  files.forEach((f) => {
+    const parts = f.path.split("/");
+    if (parts.length > 1) {
+      folders.add(parts[0]);
+    }
+  });
+  const folderCount = folders.size;
+
+  return (
+    <div className="container">
+      <header>
+        <h1>Structify</h1>
+        <p className="subtitle">
+          Package your codebase into clean Markdown. Built for sharing with
+          ChatGPT, documentation, and code reviews.
+        </p>
+      </header>
+
+      {files.length > 0 && (
+        <div className="stats">
+          <div className="stat">
+            <div className="stat-value">{fileCount}</div>
+            <div className="stat-label">Files</div>
+          </div>
+          <div className="stat">
+            <div className="stat-value">{totalKB}</div>
+            <div className="stat-label">KB</div>
+          </div>
+          <div className="stat">
+            <div className="stat-value">{folderCount}</div>
+            <div className="stat-label">Folders</div>
+          </div>
+        </div>
+      )}
+
+      <div className="section">
+        <div className="section-header">
+          <h2>Select Files</h2>
+          <span className="badge">Chrome/Edge only</span>
+        </div>
+        <FilePicker onAddFiles={handleAddFiles} />
+        <div className="actions">
           <AddCustomFile onAddOne={handleAddBatch} />
         </div>
-
-        {files.length > 0 && (
-          <div className="file-list-card">
-            <h3>Selected Files ({files.length})</h3>
-            <ul>
-              {files.map((f, i) => (
-                <li key={i}>
-                  <input
-                    type="text"
-                    value={f.path}
-                    onChange={(e) => editPath(i, e.target.value)}
-                  />
-                  <button onClick={() => removeFile(i)}>✕</button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <div className="generate-row">
-          <button
-            onClick={handleGenerate}
-            disabled={!files.length}
-            className="generate-btn"
-          >
-            Generate Markdown
-          </button>
-          <p className="status">{status}</p>
-        </div>
-
-        <div className="output-section">
-          <div className="output-column">
-            <h4>Folder Structure</h4>
-            <div className="scroll-box">
-              <TreePreview tree={tree} />
-            </div>
-          </div>
-          <div className="output-column">
-            <h4>Markdown Output</h4>
-            <div className="scroll-box markdown-box">
-              <MarkdownPreview
-                markdown={markdown}
-                onCopy={copy}
-                onDownload={download}
-                onExportPDF={exportPDF}
-              />
-
-            </div>
-          </div>
-        </div>
-
-        <section className="why-section">
-          <h3>💡 Why Use Structify?</h3>
-          <p>
-            When you want to quickly share your project with ChatGPT or someone else —
-            but don’t have time to push it to GitHub — Structify helps you select only the
-            important files, builds a clean folder structure, and combines them into one
-            Markdown file ready to copy or send instantly.
-          </p>
-        </section>
-        <section className="guide-section">
-          <h3>🚀 How to Use</h3>
-          <ol>
-            <li>Click <b>Choose Files</b> to select project files or folders.</li>
-            <li>Click <b>Generate Markdown</b>.</li>
-            <li>Copy or download your Markdown file.</li>
-            <li>Paste it directly into ChatGPT or share with others.</li>
-          </ol>
-        </section>
       </div>
+
+      {files.length > 0 && (
+        <div className="section">
+          <div className="section-header">
+            <h2>Selected Files</h2>
+            <button className="btn btn-secondary btn-small" onClick={clearAllFiles}>
+              Clear all
+            </button>
+          </div>
+          <div className="file-list">
+            {files.map((f, i) => (
+              <div className="file-item" key={i}>
+                <input
+                  type="text"
+                  className="file-path"
+                  value={f.path}
+                  onChange={(e) => updateFilePath(i, e.target.value)}
+                />
+                <button
+                  className="btn btn-secondary btn-small"
+                  onClick={() => removeFile(i)}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="section">
+        <button
+          className="btn"
+          onClick={handleGenerate}
+          disabled={!files.length}
+        >
+          {status === "Generating..." ? "Generating..." : "Generate Markdown"}
+        </button>
+      </div>
+
+      {markdown && (
+        <div className="output-grid">
+          <TreePreview tree={tree} />
+          <MarkdownPreview
+            markdown={markdown}
+            onCopy={() => {
+              navigator.clipboard.writeText(markdown);
+              showStatus("Copied");
+            }}
+          />
+        </div>
+      )}
+
+      <div className="info">
+        <h3>Why?</h3>
+        <p>
+          Quickly share entire projects with AI or collaborators without pushing
+          to GitHub. Select files, generate clean Markdown with folder structure,
+          copy or download.
+        </p>
+
+        <h3>How?</h3>
+        <ol>
+          <li>Select project folder (entire folders work in Chrome/Edge)</li>
+          <li>Review and edit file paths if needed</li>
+          <li>Generate Markdown</li>
+          <li>Copy and paste into ChatGPT or download</li>
+        </ol>
+      </div>
+
+      {status && status !== "Generating..." && (
+        <div className="status">{status}</div>
+      )}
     </div>
   );
 }

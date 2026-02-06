@@ -1,30 +1,60 @@
-export default function MarkdownPreview({
-  markdown,
-  onCopy,
-  onDownload,
-  onExportPDF,
-}) {
+import { useState } from "react";
+
+export default function MarkdownPreview({ markdown, onCopy }) {
+  const [filename, setFilename] = useState("structify_export");
+
+  const handleDownload = () => {
+    const blob = new Blob([markdown], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = (filename.trim() || "structify_export") + ".md";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <section className="w-full h-full border rounded-xl bg-white shadow-sm relative flex flex-col">
-      <div className="px-4 pt-3 pb-2 border-b">
-        <h3 className="font-medium text-sm">🧾 Combined Markdown</h3>
+    <div className="output-panel">
+      <div className="output-header">
+        <div className="output-title">Markdown</div>
+        <div className="output-actions">
+          <button className="text-btn" onClick={onCopy}>
+            Copy
+          </button>
+        </div>
       </div>
-
-      <div className="flex-1 overflow-auto text-xs whitespace-pre-wrap font-mono bg-gray-50 px-4 py-3">
-        {markdown || "— no markdown yet —"}
+      <div className="output-content">
+        <pre className="markdown-view">{markdown || "No markdown yet"}</pre>
       </div>
-
-      <div className="absolute bottom-3 right-4 flex gap-2">
-        <button disabled={!markdown} onClick={() => onCopy(markdown)}>
-          Copy
-        </button>
-        <button disabled={!markdown} onClick={() => onDownload("structify_export.md", markdown)}>
-          .md
-        </button>
-        <button disabled={!markdown} onClick={onExportPDF}>
-          PDF
-        </button>
+      <div
+        className="output-header"
+        style={{
+          borderTop: "1px solid var(--gray-200)",
+          borderBottom: "none",
+        }}
+      >
+        <div className="filename-group">
+          <input
+            type="text"
+            className="filename-input"
+            value={filename}
+            onChange={(e) => setFilename(e.target.value)}
+            placeholder="filename"
+          />
+          <span
+            style={{
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: "12px",
+              color: "var(--gray-500)",
+            }}
+          >
+            .md
+          </span>
+          <button className="text-btn" onClick={handleDownload}>
+            Download
+          </button>
+        </div>
       </div>
-    </section>
+    </div>
   );
 }

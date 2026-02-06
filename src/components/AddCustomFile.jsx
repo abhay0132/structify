@@ -1,4 +1,4 @@
-export default function AddCustomFile({ onAddOne: onAddBatch }) {
+export default function AddCustomFile({ onAddOne }) {
   function handleUpload(e) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -8,29 +8,30 @@ export default function AddCustomFile({ onAddOne: onAddBatch }) {
       file: f,
     }));
 
-    onAddBatch(fileObjs);
+    onAddOne(fileObjs);
     e.target.value = "";
   }
 
   return (
-    <div className="space-y-1">
-      <label
-        htmlFor="customFileUpload"
-        className="text-xs px-3 py-1 border rounded hover:bg-gray-100 cursor-pointer"
-      >
-        ➕ Add Custom File(s)
+    <>
+      <label htmlFor="customFileInput">
+        <button
+          className="btn btn-secondary"
+          onClick={(e) => {
+            e.preventDefault();
+            document.getElementById("customFileInput").click();
+          }}
+        >
+          Add files manually
+        </button>
       </label>
       <input
-        id="customFileUpload"
+        id="customFileInput"
         type="file"
         multiple
-        className="hidden"
         onChange={handleUpload}
+        style={{ display: "none" }}
       />
-      <p className="text-xs text-gray-500">
-        Select one or more files manually — Structify will detect their likely folder
-        (for example <b>utils/</b> or <b>components/</b>) based on your existing files.
-      </p>
-    </div>
+    </>
   );
 }
